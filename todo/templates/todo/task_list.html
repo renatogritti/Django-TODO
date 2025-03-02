@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Tarefas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'todo/css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Minhas Tarefas</h1>
+            <a href="{% url 'task-create' %}" class="btn">Nova Tarefa</a>
+        </div>
+        
+        <ul class="task-list">
+            {% for task in tasks %}
+            <li class="task-item priority-{{ task.priority|lower }} {% if task.completed %}completed{% endif %}" data-task-id="{{ task.id }}">
+                <div class="task-checkbox">
+                    <input type="checkbox" 
+                           {% if task.completed %}checked{% endif %}
+                           onchange="toggleTaskStatus(this, {{ task.id }})"
+                           class="task-complete-checkbox">
+                    <span class="checkmark"></span>
+                </div>
+                <div class="task-content">
+                    <h3>{{ task.title }}</h3>
+                    {% if task.description %}
+                        <p>{{ task.description }}</p>
+                    {% endif %}
+                    <p class="status">
+                        Status: {% if task.completed %}Concluída{% else %}Pendente{% endif %} |
+                        Prioridade: {{ task.get_priority_display }}
+                    </p>
+                </div>
+                <div class="task-actions">
+                    <a href="{% url 'task-update' task.pk %}" class="btn">Editar</a>
+                    <a href="{% url 'task-delete' task.pk %}" class="btn">Deletar</a>
+                </div>
+            </li>
+            {% empty %}
+            <li class="task-item">Nenhuma tarefa cadastrada.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <script src="{% static 'todo/js/drag-drop.js' %}"></script>
+    <script src="{% static 'todo/js/task-actions.js' %}"></script>
+</body>
+</html>

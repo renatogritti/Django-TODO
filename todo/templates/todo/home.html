@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minhas Listas de Tarefas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'todo/css/style.css' %}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Painel Esquerdo - Listas -->
+        <div class="lists-panel">
+            <div class="panel-header">
+                <h2>Minhas Listas</h2>
+                <button onclick="openListModal()" class="btn">Nova Lista</button>
+            </div>
+            <ul class="lists-menu">
+                {% for list in lists %}
+                <li class="list-item {% if list == active_list %}active{% endif %}">
+                    <div class="list-item-content">
+                        <a href="?list={{ list.id }}">{{ list.title }}</a>
+                        <div class="list-actions">
+                            <button onclick="openEditListModal({{ list.id }}, '{{ list.title }}')" class="btn-icon">✏️</button>
+                            <button onclick="openDeleteListModal({{ list.id }}, '{{ list.title }}')" class="btn-icon">🗑️</button>
+                        </div>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="list-item">Nenhuma lista criada</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Painel Principal - Tarefas -->
+        <div class="tasks-panel" data-list-id="{{ active_list.id }}">
+            {% if active_list %}
+            <div class="panel-header">
+                <h1>{{ active_list.title }}</h1>
+                <button onclick="openTaskModal()" class="btn">Nova Tarefa</button>
+            </div>
+            
+            <ul class="task-list">
+                {% for task in tasks %}
+                <li class="task-item priority-{{ task.priority|lower }} {% if task.completed %}completed{% endif %}" 
+                    data-task-id="{{ task.id }}">
+                    <div class="task-checkbox">
+                        <input type="checkbox" 
+                               {% if task.completed %}checked{% endif %}
+                               onchange="toggleTaskStatus(this, {{ task.id }})"
+                               class="task-complete-checkbox">
+                        <span class="checkmark"></span>
+                    </div>
+                    <div class="task-content">
+                        <h3>{{ task.title }}</h3>
+                        {% if task.description %}
+                            <p>{{ task.description }}</p>
+                        {% endif %}
+                        <p class="status">
+                            Prioridade: {{ task.get_priority_display }}
+                        </p>
+                    </div>
+                    <div class="task-actions">
+                        <button onclick="openEditTaskModal({{ task.id }}, '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.priority }}', {{ task.completed|yesno:'true,false' }})" class="btn">Editar</button>
+                        <button onclick="openDeleteTaskModal({{ task.id }}, '{{ task.title|escapejs }}')" class="btn">Deletar</button>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="task-item">Nenhuma tarefa nesta lista</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state">
+                <h2>Crie uma lista para começar</h2>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Modal Nova Tarefa -->
+        <div id="taskModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Nova Tarefa</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <form id="taskForm" method="post" onsubmit="return submitTaskForm(event)">
+                    {% csrf_token %}
+                    <input type="hidden" id="task_id" name="task_id" value="">
+                    <div class="form-group">
+                        <label for="id_title">Título</label>
+                        <input type="text" id="id_title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_description">Descrição</label>
+                        <textarea id="id_description" name="description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_priority">Prioridade</label>
+                        <select id="id_priority" name="priority">
+                            <option value="B">Baixa</option>
+                            <option value="M" selected>Média</option>
+                            <option value="A">Alta</option>
+                        </select>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label for="id_completed">
+                            <input type="checkbox" id="id_completed" name="completed">
+                            Concluída
+                        </label>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn">Salvar</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+<script src="{% static 'todo/js/list-modal.js' %}"></script>
+        <!-- Modal Lista -->
+        <div id="listModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Nova Lista</h2>
+                    <span class="close-modal" onclick="closeListModal()">&times;</span>
+                </div>
+                <form id="listForm" method="post" onsubmit="return submitListForm(event)">
+                    {% csrf_token %}
+                    <input type="hidden" id="list_id" name="list_id" value="">
+                    <div class="form-group">
+                        <label for="id_list_title">Título da Lista</label>
+                        <input type="text" id="id_list_title" name="title" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn">Salvar</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeListModal()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Deletar Tarefa -->
+        <div id="deleteTaskModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Deletar Tarefa</h2>
+                    <span class="close-modal" onclick="closeDeleteTaskModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja deletar a tarefa "<span id="deleteTaskName"></span>"?</p>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="confirmDeleteTask()" class="btn btn-danger">Deletar</button>
+                    <button onclick="closeDeleteTaskModal()" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Deletar Lista -->
+        <div id="deleteListModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Deletar Lista</h2>
+                    <span class="close-modal" onclick="closeDeleteListModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja deletar a lista "<span id="deleteListName"></span>"?</p>
+                    <p class="warning">Todas as tarefas desta lista também serão deletadas!</p>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="confirmDeleteList()" class="btn btn-danger">Deletar</button>
+                    <button onclick="closeDeleteListModal()" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'todo/js/drag-drop.js' %}"></script>
+    <script src="{% static 'todo/js/task-actions.js' %}"></script>
+    <script src="{% static 'todo/js/modal.js' %}"></script>
+    <script src="{% static 'todo/js/list-modal.js' %}"></script>
+    <script src="{% static 'todo/js/delete-modals.js' %}"></script>
+</body>
+</html>
